@@ -13,7 +13,7 @@
 
 #include "sensor_data.h"
 
-#include "components/lightSensor.h"
+#include "components/sensors/lightSensor.h"
 
 // OUTPUT PINS
 #define GPIO_BUZZ_PIN (9)
