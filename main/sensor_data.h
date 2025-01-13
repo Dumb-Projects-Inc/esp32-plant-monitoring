@@ -13,5 +13,5 @@ typedef struct {
         float humidity;
     } soil_sensor;
     ALIGN float temperature;
-    ALIGN float light;
+    ALIGN int light;
 } sensor_data_t;

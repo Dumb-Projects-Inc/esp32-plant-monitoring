@@ -7,8 +7,7 @@ int init_light_sensor(int ADC_CHANNEL) {
     return 0;
 }
 
-float get_light_value() {
-    
+int get_light_value() {
     int val = adc1_get_raw(ADC1_CHANNEL_0); //TODO: Update to be reusable for multiple channels
     return val;
 }
