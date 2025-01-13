@@ -26,9 +26,6 @@
 
 
 // I2C Pins
-#define GPIO_SDA_PIN (2)
-#define GPIO_SCL_PIN (3)
-
 #define I2C_MASTER_FREQ_HZ 75000 //Reduce it to 50000 if the temperature/umidity sensor fails
 #define I2C_MASTER_TX_BUF_DISABLE 0
 #define I2C_MASTER_RX_BUF_DISABLE 0
@@ -53,8 +50,22 @@ void sensorLoop(void *pvParameters ) {
         data.light = get_light_value();
         data.soil_sensor.humidity = 10;
         data.soil_sensor.temperature = 25;
+
+        xQueueSend(sensorQueue, &data, portMAX_DELAY);
         vTaskDelay(pdMS_TO_TICKS(5000)); // wait 5 seconds
     }
+}
+
+void controlLoop(void *pvParameters) {
+    sensor_data_t data;
+    while (1)
+    {
+        if(xQueueReceive(sensorQueue, &data, portMAX_DELAY)) {
+
+        }
+        vTaskDelay(pdMS_TO_TICKS(5000)); // wait 5 second
+    }
+    
 }
 
 QueueHandle_t sensorQueue; //Shared sensor data
@@ -117,5 +128,6 @@ void app_main(void)
 
     void *sensorParams = {0}; //Initialized sensors might go here
     xTaskCreate(sensorLoop, "sensorLoop", 2048, sensorParams, 1, NULL);
+    xTaskCreate(controlLoop, "controlLoop", 2048, NULL, 1, NULL);
 
 }
