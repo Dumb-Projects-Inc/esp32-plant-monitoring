@@ -10,7 +10,7 @@
 typedef struct {
     ALIGN struct {
         float temperature;
-        float humidity;
+        uint16_t humidity;
     } soil_sensor;
     ALIGN float temperature;
     ALIGN int light;
