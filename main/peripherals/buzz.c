@@ -1,6 +1,6 @@
 #include "buzz.h"
 
-
+volatile buzz_config_t b_config = {};
 esp_err_t init_buzzer(buzz_config_t *config) {
 
     // Prepare and then apply the LEDC PWM timer configuration (we use it for the buzzer)
@@ -29,6 +29,8 @@ esp_err_t init_buzzer(buzz_config_t *config) {
     config->ledc_channel_buzz = ledc_channel_buzz;
     ESP_ERROR_CHECK(ledc_channel_config(&config->ledc_channel_buzz));
     
+    //Make config available to all functions in this file
+    b_config = *config;
     return 0;
 }
 
@@ -36,7 +38,7 @@ esp_err_t init_buzzer(buzz_config_t *config) {
 
 
 //This function should be removed down the line, when we can play music
-void all(buzz_config_t *config) {
+void all() {
     
     
 
@@ -73,4 +75,33 @@ void all(buzz_config_t *config) {
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
     ESP_LOGI(BUZZER_TAG, "Buzzer off.");
+}
+
+void play_song(const int *notes, int length) {
+    for (int i = 0; i < length; i += 3) {
+        play_note(notes[i], notes[i+1]);
+        pause_note(notes[i+2]);
+    }
+    pause_note(1);
+}
+
+void play_note(int hz, int period) {
+    // Set duty
+    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 6000)); //50% duty
+    // Update duty to apply the new value
+    ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
+    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, hz)); //50% duty
+    vTaskDelay((period) / portTICK_PERIOD_MS);
+    // Set duty
+    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 0)); //0% duty
+    // Update duty to apply the new value
+    ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
+}
+
+void pause_note(int period) {
+    // Set duty
+    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 0)); //0% duty
+    // Update duty to apply the new value
+    ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
+    vTaskDelay((period) / portTICK_PERIOD_MS);
 }

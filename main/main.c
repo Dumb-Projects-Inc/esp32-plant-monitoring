@@ -34,12 +34,7 @@
 #define tag "PROGRAM"
 
 QueueHandle_t sensorQueue; // Shared sensor data
-buzz_config_t b_config = {};
-rgb_led_config_t rgb_config = {
-    .r_io_num = GPIO_RGB_R_PIN,
-    .g_io_num = GPIO_RGB_G_PIN,
-    .b_io_num = GPIO_RGB_B_PIN,
-};
+
 
 
 void sensorLoop(void *pvParameters)
@@ -52,7 +47,7 @@ void sensorLoop(void *pvParameters)
     {
         data.light = get_light_value();
         data.soil_sensor.humidity = get_soil_moisture();
-        //data.soil_sensor.temperature =
+        data.soil_sensor.temperature = get_soil_temperature();
         xQueueSend(sensorQueue, &data, portMAX_DELAY);
         vTaskDelay(pdMS_TO_TICKS(1000)); // wait 5 seconds
     }
@@ -65,16 +60,16 @@ void controlLoop(void *pvParameters)
     {
         if (xQueueReceive(sensorQueue, &data, portMAX_DELAY))
         {
-            if(data.soil_sensor.humidity > 800)
+            if(data.soil_sensor.humidity < 600)
             {
-                rgb_set_color(&rgb_config, 255, 0, 0);
-                all(&b_config);
+                rgb_set_color(255, 0, 0);
+                play_song(doom, 300);
             }
             else
             {
-                rgb_set_color(&rgb_config, 0, 255, 0);
+                rgb_set_color(0, 255, 0);
             }
-            ESP_LOGI(tag, "Moisture: %u, Light: %d", data.soil_sensor.humidity, data.light);
+            ESP_LOGI(tag, "Soil Moisture: %u, Soil Temperature, %.2f, Light: %d", data.soil_sensor.humidity, data.soil_sensor.temperature, data.light);
         }
         vTaskDelay(pdMS_TO_TICKS(1000)); // wait 5 second
     }
@@ -84,18 +79,17 @@ void controlLoop(void *pvParameters)
 
 void app_main(void)
 {
-    b_config.gpio_num = GPIO_BUZZ_PIN;
-    init_buzzer(&b_config);
+    buzz_config_t b_config = {.gpio_num = GPIO_BUZZ_PIN};
+    rgb_led_config_t rgb_config = {
+        .r_io_num = GPIO_RGB_R_PIN,
+        .g_io_num = GPIO_RGB_G_PIN,
+        .b_io_num = GPIO_RGB_B_PIN,
+    };
     
+    init_buzzer(&b_config);
     init_rgb_led(&rgb_config);
-    rgb_set_color(&rgb_config, 0, 0, 0);
-    vTaskDelay(pdMS_TO_TICKS(5000));
-
-    // all(&b_config);
-
     init_i2c();
 
-    //stemma_soil_demo();
 
     // Initialize a shared data struct
     // sensor_data_t *data = {0};

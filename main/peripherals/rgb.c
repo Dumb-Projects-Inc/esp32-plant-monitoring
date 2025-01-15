@@ -1,6 +1,6 @@
 #include "rgb.h"
 
-#include "esp_log.h"
+volatile rgb_led_config_t rgb_config = {};
 esp_err_t init_rgb_led(rgb_led_config_t *config){
     
     ledc_timer_config_t ledc_timer = {
@@ -51,16 +51,17 @@ esp_err_t init_rgb_led(rgb_led_config_t *config){
     
     config->ledc_channel_blue = ledc_channel_blue;
     ESP_ERROR_CHECK(ledc_channel_config(&config->ledc_channel_blue));
+    
+    //Make config available to all functions in this file
+    rgb_config = *config;
     return 0;
 }
 
-void rgb_set_color(rgb_led_config_t *config, uint8_t red, uint8_t green, uint8_t blue) {
+void rgb_set_color(uint8_t red, uint8_t green, uint8_t blue) {
 
     uint32_t duty_red = LEDC_DUTY - red*(LEDC_DUTY / 255);
     uint32_t duty_green = LEDC_DUTY - green*(LEDC_DUTY / 255);
     uint32_t duty_blue = LEDC_DUTY - blue*(LEDC_DUTY / 255);
-
-    ESP_LOGI("RGB", "Setting color to: %lu %lu %lu", duty_red, duty_green, duty_blue);
 
     ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_RED, duty_red);
     ledc_set_duty(LEDC_MODE, LEDC_CHANNEL_GREEN, duty_green);

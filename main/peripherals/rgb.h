@@ -29,4 +29,4 @@ typedef struct {
 } rgb_led_config_t;
 
 esp_err_t init_rgb_led(rgb_led_config_t *config);
-void rgb_set_color(rgb_led_config_t *config, uint8_t red, uint8_t green, uint8_t blue);
+void rgb_set_color(uint8_t red, uint8_t green, uint8_t blue);
