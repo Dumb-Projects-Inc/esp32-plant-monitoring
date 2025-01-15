@@ -65,13 +65,13 @@ void controlLoop(void *pvParameters)
             if(data.soil_sensor.humidity < 600)
             {
                 rgb_set_color(255, 0, 0);
-                play_song(doom, 300);
+                play_song(mario);  
             }
             else
             {
                 rgb_set_color(0, 255, 0);
             }
-            ESP_LOGI(tag, "Soil Moisture: %u, Soil Temperature, %.2f, Light: %d", data.soil_sensor.humidity, data.soil_sensor.temperature, data.light);
+            ESP_LOGI(tag, "Soil Moisture: %u, Light: %d", data.soil_sensor.humidity, data.light);
         }
         vTaskDelay(pdMS_TO_TICKS(1000)); // wait 5 second
     }
@@ -98,5 +98,5 @@ void app_main(void)
 
     void *sensorParams = {0}; // Initialized sensors might go here
     xTaskCreate(sensorLoop, "sensorLoop", 2048, sensorParams, 1, NULL);
-    xTaskCreate(controlLoop, "controlLoop", 2048, NULL, 1, NULL);
+    xTaskCreate(controlLoop, "controlLoop", 4048, NULL, 1, NULL);
 }

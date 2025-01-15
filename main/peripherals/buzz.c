@@ -77,8 +77,9 @@ void all() {
     ESP_LOGI(BUZZER_TAG, "Buzzer off.");
 }
 
-void play_song(const int *notes, int length) {
-    for (int i = 0; i < length; i += 3) {
+void play_song(int *notes) {
+    size_t length = notes[0];
+    for (int i = 1; i < length; i += 3) {
         play_note(notes[i], notes[i+1]);
         pause_note(notes[i+2]);
     }
@@ -104,4 +105,10 @@ void pause_note(int period) {
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
     vTaskDelay((period) / portTICK_PERIOD_MS);
+}
+
+void song_task(void *pvParameters) {
+    //int **song = pvParameters;
+    ESP_LOGI(BUZZER_TAG, "%d", 1);
+    //play_song(song);
 }
