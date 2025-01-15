@@ -22,13 +22,17 @@ def main(args):
             print(f"Found instrument: {instrument.name}")
             end_time = None
             for note in instrument.notes:
-                if end_time is not None:
-                    data.append(int((end_time - note.start) * 1000))                    
+                hz = int(midi_to_hz(note.pitch))
+                if hz > 0:
+                    if end_time is not None:
+                        wait = int((end_time - note.start) * 1000)
+                        wait = wait if wait > 0 else 1
+                        data.append(wait)                    
 
-                data.append(int(midi_to_hz(note.pitch)))
-                data.append(int((note.end - note.start) * 1000))
-                
-                end_time = note.end
+                    data.append(hz)
+                    data.append(int((note.end - note.start) * 1000))
+                    
+                    end_time = note.end
 
             data.append(0)
             break
