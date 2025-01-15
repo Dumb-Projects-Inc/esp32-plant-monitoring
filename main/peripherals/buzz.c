@@ -1,5 +1,6 @@
 #include "buzz.h"
 
+
 esp_err_t init_buzzer(buzz_config_t *config) {
 
     // Prepare and then apply the LEDC PWM timer configuration (we use it for the buzzer)
@@ -11,7 +12,7 @@ esp_err_t init_buzzer(buzz_config_t *config) {
         .clk_cfg          = LEDC_AUTO_CLK
     };
     config->ledc_timer_buzz = ledc_timer_buzz;
-
+    ESP_ERROR_CHECK(ledc_timer_config(&config->ledc_timer_buzz));
 
     // Prepare and then apply the LEDC PWM channel configuration
     ledc_channel_config_t ledc_channel_buzz = {
@@ -24,7 +25,9 @@ esp_err_t init_buzzer(buzz_config_t *config) {
         .hpoint         = 0
     };
 
+    
     config->ledc_channel_buzz = ledc_channel_buzz;
+    ESP_ERROR_CHECK(ledc_channel_config(&config->ledc_channel_buzz));
     
     return 0;
 }
@@ -35,8 +38,7 @@ esp_err_t init_buzzer(buzz_config_t *config) {
 //This function should be removed down the line, when we can play music
 void all(buzz_config_t *config) {
     
-    ESP_ERROR_CHECK(ledc_timer_config(&config->ledc_timer_buzz));
-    ESP_ERROR_CHECK(ledc_channel_config(&config->ledc_channel_buzz));
+    
 
     // Set duty
     ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 4096)); //50% duty
