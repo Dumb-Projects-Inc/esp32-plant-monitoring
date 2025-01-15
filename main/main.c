@@ -46,54 +46,60 @@
 
 #define OLED_ADDR 0x3C
 
-QueueHandle_t sensorQueue; // Shared sensor data
+static volatile sensor_data_t sensorData = {
+    .soil.humidity = 0,
+    .soil.temperature = 0,
+    .temperature = 0,
+    .humidity = 0,
+    .light = 0,
+    .mutex = NULL
+};
+
 ssd1306_handle_t ssd1306_dev = NULL;
 
 void sensorLoop(void *pvParameters)
 {
     
-    sensor_data_t data;
-
     init_light_sensor(ADC1_CHANNEL_0);
     i2c_dev_t dev = {0};
     ESP_ERROR_CHECK(am2320_shared_i2c_init(&dev, I2C_NUM));
 
     while (1)
     {
-        data.light = get_light_value();
-        data.soil_sensor.humidity = get_soil_moisture();
-        data.soil_sensor.temperature = get_soil_temperature();
+        xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
+        sensorData.light = get_light_value();
+        sensorData.soil.humidity = get_soil_moisture();
+        sensorData.soil.temperature = get_soil_temperature();
 
         float temperature, humidity;
         esp_err_t res = am2320_get_rht(&dev, &temperature, &humidity);
         if (res == ESP_OK) {
-            data.temperature = temperature;
-            data.humidity = humidity;
-            ESP_LOGI(tag, "Temperature: %.1f°C, Humidity: %.1f%%", temperature, humidity);
+            sensorData.temperature = temperature;
+            sensorData.humidity = humidity;
+            //ESP_LOGI(tag, "Temperature: %.1f°C, Humidity: %.1f%%", temperature, humidity);
+
         }
-        xQueueSend(sensorQueue, &data, portMAX_DELAY);
+        xSemaphoreGive(sensorData.mutex);
         vTaskDelay(pdMS_TO_TICKS(1000)); // wait 5 seconds
     }
 }
 
 void controlLoop(void *pvParameters)
 {
-    sensor_data_t data;
     while (1)
     {
-        if (xQueueReceive(sensorQueue, &data, portMAX_DELAY))
+        xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
+        if(sensorData.soil.humidity < 600)
         {
-            if(data.soil_sensor.humidity < 600)
-            {
-                rgb_set_color(255, 0, 0);
-                //play_song(doom);  
-            }
-            else
-            {
-                rgb_set_color(0, 255, 0);
-            }
-            ESP_LOGI(tag, "Light: %d, Soil Temp: %.2f, Soil Humidity: %d", data.light, data.soil_sensor.temperature, data.soil_sensor.humidity);
+            rgb_set_color(255, 0, 0);
+            //play_song(doom);  
         }
+        else
+        {
+            rgb_set_color(0, 255, 0);
+        }
+        ESP_LOGI(tag, "Light: %d, Ambient Temp: %.2f, Soil Humidity: %d", sensorData.light, sensorData.temperature, sensorData.soil.humidity);
+        xSemaphoreGive(sensorData.mutex);
         vTaskDelay(pdMS_TO_TICKS(1000)); // wait 5 second
     }
 }
@@ -116,15 +122,9 @@ void app_main(void)
     humidityScreen(ssd1306_dev, 66, 1);
 
     
-    
 
+    sensorData.mutex = xSemaphoreCreateMutex();
 
-    // Initialize a shared data struct
-    // sensor_data_t *data = {0};
-
-    sensorQueue = xQueueCreate(5, sizeof(sensor_data_t));
-
-    void *sensorParams = {0}; // Initialized sensors might go here
-    xTaskCreate(sensorLoop, "sensorLoop", 4096, sensorParams, 1, NULL);
+    xTaskCreate(sensorLoop, "sensorLoop", 4096, NULL, 1, NULL);
     xTaskCreate(controlLoop, "controlLoop", 4096, NULL, 1, NULL);
 }
