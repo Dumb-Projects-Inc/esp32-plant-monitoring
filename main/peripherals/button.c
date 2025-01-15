@@ -24,8 +24,6 @@ void button_loop(void *Pbargs) {
                 }
                 last_state = current_state;
             }
-
-            vTaskDelay(50/portTICK_PERIOD_MS);
         }
     }
     
