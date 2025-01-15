@@ -20,33 +20,19 @@ def main(args):
     for instrument in midi_data.instruments:
         if not instrument.is_drum:
             print(f"Found instrument: {instrument.name}")
+            end_time = None
             for note in instrument.notes:
+                if end_time is not None:
+                    data.append(int((end_time - note.start) * 1000))                    
+
                 data.append(int(midi_to_hz(note.pitch)))
                 data.append(int((note.end - note.start) * 1000))
-                data.append(int(100))
-            
-            #last = 0
-            #time = 0
-            #for c in instrument.get_piano_roll():
-            #    for n in c:
-            #        hz = 0
-            #        if n > 0:
-            #            hz = int(midi_to_hz(n))
-            #            #print(f"Note: {n} with Hz: {midi_to_hz(n):.2f}")
-            #            
-            #        if hz == last:
-            #            time += 1
-            #        else:
-            #            if last == 0 and len(data) > 0:
-            #                data.append(time)
-            #            else:
-            #                data.append(last)
-            #                data.append(time)
-            #                #data.append(0)
-            #            time = 0
-            #        last = hz
+                
+                end_time = note.end
 
+            data.append(0)
             break
+
     print(data[:3*100])
 
     
