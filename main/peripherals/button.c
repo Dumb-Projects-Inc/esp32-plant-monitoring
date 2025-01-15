@@ -1,10 +1,12 @@
 #include "button.h"
 
-static QueueHandle_t queue_handle = NULL;
+static TaskHandle_t taskHandle = NULL;
 
 static void IRAM_ATTR button_isr_handler(void* arg) {
-    int gpio_num = (int)arg;
-    xQueueSendFromISR(queue_handle, &gpio_num, NULL);
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    vTaskNotifyGiveFromISR(taskHandle, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 void button_loop(void *Pbargs) {
@@ -14,19 +16,17 @@ void button_loop(void *Pbargs) {
     int gpio_num;
 
     while (1) {
-        if (xQueueReceive(queue_handle, &gpio_num, portMAX_DELAY)) {
-            current_state = gpio_get_level(args->button_gpio);
-            if(current_state!= last_state) {
-                if (current_state == 0) {
-                    args->callback_button_down();
-                } else {
-                    args->callback_button_up();
-                }
-                last_state = current_state;
+        ulTaskNotifyTake(0, portMAX_DELAY);
+        current_state = gpio_get_level(args->button_gpio);
+        if(current_state!= last_state) {
+            if (current_state == 0) {
+                args->callback_button_down();
+            } else {
+                args->callback_button_up();
             }
+            last_state = current_state;
         }
     }
-    
 }
 
 void init_button(int button_gpio, void (*callback_button_down)(), void (*callback_button_up)()) {
@@ -48,9 +48,9 @@ void init_button(int button_gpio, void (*callback_button_down)(), void (*callbac
     args->callback_button_down = callback_button_down;
     args->callback_button_up = callback_button_up;
 
-    queue_handle = xQueueCreate(10, sizeof(int));
 
-    xTaskCreate(button_loop, "button_loop", 1024*2, args, 1, NULL);
+    xTaskCreate(button_loop, "button_loop", 1024*2, args, 1, &taskHandle);
+
     gpio_install_isr_service(0);
-    gpio_isr_handler_add(button_gpio, button_isr_handler, (void*)button_gpio);
+    gpio_isr_handler_add(button_gpio, button_isr_handler, (void*)&taskHandle);
 }
