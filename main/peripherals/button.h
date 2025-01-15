@@ -1,0 +1,1 @@
+void init_button(int button_gpio, void (*callback_button_down)(), void (*callback_button_up)());
