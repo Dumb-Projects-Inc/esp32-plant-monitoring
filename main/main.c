@@ -16,6 +16,8 @@
 #include "sensors/lightSensor.h"
 #include "sensors/soilSensor.h"
 
+#include "peripherals/button.h"
+
 // OUTPUT PINS
 #define GPIO_BUZZ_PIN (9)
 #define GPIO_REDLED_PIN (1)
@@ -74,7 +76,6 @@ void controlLoop(void *pvParameters)
         vTaskDelay(pdMS_TO_TICKS(1000)); // wait 5 second
     }
 }
-
 
 
 void app_main(void)
