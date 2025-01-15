@@ -1,9 +1,6 @@
 #include "animations.h"
-#include "freertos/task.h"
-#include "ssd1306.h"
-#include "leaf_animation.h"
-#include "settings_animation.h"
-#include "driver/i2c.h"
+
+//#include "driver/i2c.h"
 
 #define I2C_MASTER_NUM I2C_NUM_0
 #define OLED_ADDR 0x3C
