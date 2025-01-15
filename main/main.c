@@ -15,6 +15,7 @@
 
 #include "sensors/lightSensor.h"
 #include "sensors/soilSensor.h"
+#include "am2320.h"
 
 #include "peripherals/button.h"
 
@@ -41,15 +42,25 @@ QueueHandle_t sensorQueue; // Shared sensor data
 
 void sensorLoop(void *pvParameters)
 {
+    
     sensor_data_t data;
 
     init_light_sensor(ADC1_CHANNEL_0);
+    i2c_dev_t dev = {0};
+    ESP_ERROR_CHECK(am2320_shared_i2c_init(&dev, I2C_NUM));
 
     while (1)
     {
         data.light = get_light_value();
         data.soil_sensor.humidity = get_soil_moisture();
         data.soil_sensor.temperature = get_soil_temperature();
+
+        float temperature, humidity;
+        esp_err_t res = am2320_get_rht(&dev, &temperature, &humidity);
+        if (res == ESP_OK)
+            data.temperature = temperature;
+            data.humidity = humidity;
+            ESP_LOGI(tag, "Temperature: %.1f°C, Humidity: %.1f%%", temperature, humidity);
         xQueueSend(sensorQueue, &data, portMAX_DELAY);
         vTaskDelay(pdMS_TO_TICKS(1000)); // wait 5 seconds
     }
@@ -65,13 +76,13 @@ void controlLoop(void *pvParameters)
             if(data.soil_sensor.humidity < 600)
             {
                 rgb_set_color(255, 0, 0);
-                play_song(mario);  
+                //play_song(doom);  
             }
             else
             {
                 rgb_set_color(0, 255, 0);
             }
-            ESP_LOGI(tag, "Soil Moisture: %u, Light: %d", data.soil_sensor.humidity, data.light);
+            ESP_LOGI(tag, "Light: %d, Soil Temp: %.2f, Soil Humidity: %d", data.light, data.soil_sensor.temperature, data.soil_sensor.humidity);
         }
         vTaskDelay(pdMS_TO_TICKS(1000)); // wait 5 second
     }
@@ -97,6 +108,6 @@ void app_main(void)
     sensorQueue = xQueueCreate(5, sizeof(sensor_data_t));
 
     void *sensorParams = {0}; // Initialized sensors might go here
-    xTaskCreate(sensorLoop, "sensorLoop", 2048, sensorParams, 1, NULL);
-    xTaskCreate(controlLoop, "controlLoop", 4048, NULL, 1, NULL);
+    xTaskCreate(sensorLoop, "sensorLoop", 4096, sensorParams, 1, NULL);
+    xTaskCreate(controlLoop, "controlLoop", 4096, NULL, 1, NULL);
 }
