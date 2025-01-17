@@ -28,6 +28,7 @@
 // Layouts
 #include "layouts/humidity_screen.h"
 
+#include "wifi.h"
 
 // OUTPUT PINS
 #define GPIO_BUZZ_PIN (9)
@@ -43,14 +44,15 @@
 #define GPIO_LIGHTSENSOR_PIN (0)
 
 // Sample rates and waits
-#define SENSOR_SAMPLE_RATE_MS (500)
+#define SENSOR_SAMPLE_RATE_MS (1000)
 #define NUM_SAMPLE 1
 #define TIME_BETWEEN_SAMPLES 20
 
-#define CONTROL_DELAY_MS (1000)
+#define CONTROL_DELAY_MS (5000)
 
 
 #define EXPERIMENT_LOGGING 0 //0 = on , 1 = off
+#define LOGGING_WIFI 0 //0 = on , 1 = off
 
 #define tag "PROGRAM"
 
@@ -113,7 +115,11 @@ void sensorLoop(void *pvParameters)
 }
 
 void log_data_serial() {
+    #if LOGGING_WIFI == 0
+    post(sensorData);
+    #else
     ESP_LOGI("SENSOR_VALS", "%d, %.2f, %.2f, %.2f, %d", sensorData.light, sensorData.temperature, sensorData.humidity, sensorData.soil.temperature, sensorData.soil.humidity);
+    #endif
 }
 
 void controlLoop(void *pvParameters)
@@ -153,18 +159,21 @@ void app_main(void)
     init_i2c();
     init_light_sensor(ADC1_CHANNEL_0);
 
-
+    #if LOGGING_WIFI == 0
+    init_wifi();
+    #endif
     
     sensorData.mutex = xSemaphoreCreateMutex();
     animations_init(&ssd1306_dev);
+    
     xTaskCreate(leaf_animation_play, "HumidityScreenTask", 4096, (void *)&ssd1306_dev, 5, NULL);
+    
     xTaskCreate(sensorLoop, "sensorLoop", 4096, NULL, 1, NULL);
     xTaskCreate(controlLoop, "controlLoop", 4096, NULL, 1, NULL);
-
+    
     while(1) {
         humidityScreen(ssd1306_dev);
         vTaskDelay(pdMS_TO_TICKS(1000));
         
     }
-
 }

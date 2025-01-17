@@ -3,3 +3,5 @@ sdkconfig
 sdkconfig.old
 .vscode/
 .venv/
+
+main/wifi_secrets.h
