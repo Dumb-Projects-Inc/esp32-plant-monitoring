@@ -56,7 +56,7 @@
 
 #define OLED_ADDR 0x3C
 
-static volatile sensor_data_t sensorData = {
+volatile sensor_data_t sensorData = {
     .soil.humidity = 0,
     .soil.temperature = 0,
     .temperature = 0,
@@ -64,6 +64,9 @@ static volatile sensor_data_t sensorData = {
     .light = 0,
     .mutex = NULL
 };
+volatile bool display_update_required = false;
+
+
 
 ssd1306_handle_t ssd1306_dev = NULL;
 
@@ -150,15 +153,18 @@ void app_main(void)
     init_buzzer(&b_config);
     init_rgb_led(&rgb_config);
     init_i2c();
-    
-    animations_init(&ssd1306_dev);
-
-    humidityScreen(ssd1306_dev, 66, 1);
 
     
-
     sensorData.mutex = xSemaphoreCreateMutex();
-
+    animations_init(&ssd1306_dev);
+    xTaskCreate(leaf_animation_play, "HumidityScreenTask", 4096, (void *)&ssd1306_dev, 5, NULL);
     xTaskCreate(sensorLoop, "sensorLoop", 4096, NULL, 1, NULL);
     xTaskCreate(controlLoop, "controlLoop", 4096, NULL, 1, NULL);
+
+    while(1) {
+        humidityScreen(ssd1306_dev);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        
+    }
+
 }
