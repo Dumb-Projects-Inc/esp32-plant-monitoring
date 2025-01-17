@@ -42,6 +42,16 @@
 #define GPIO_BTN2_PIN (19)
 #define GPIO_LIGHTSENSOR_PIN (0)
 
+// Sample rates and waits
+#define SENSOR_SAMPLE_RATE_MS (500)
+#define NUM_SAMPLE 1
+#define TIME_BETWEEN_SAMPLES 20
+
+#define CONTROL_DELAY_MS (1000)
+
+
+#define EXPERIMENT_LOGGING 0 //0 = on , 1 = off
+
 #define tag "PROGRAM"
 
 #define OLED_ADDR 0x3C
@@ -67,21 +77,42 @@ void sensorLoop(void *pvParameters)
     while (1)
     {
         xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
-        sensorData.light = get_light_value();
-        sensorData.soil.humidity = get_soil_moisture();
-        sensorData.soil.temperature = get_soil_temperature();
+        sensor_data_t sensorData_sample = {
+            .soil.humidity = 0,
+            .soil.temperature = 0,
+            .temperature = 0,
+            .humidity = 0,
+            .light = 0,
+        };
+        for(size_t i = 0; i < NUM_SAMPLE; i++){
+            sensorData_sample.light += get_light_value();
+            sensorData_sample.soil.humidity += get_soil_moisture();
+            sensorData_sample.soil.temperature += get_soil_temperature();
 
-        float temperature, humidity;
-        esp_err_t res = am2320_get_rht(&dev, &temperature, &humidity);
-        if (res == ESP_OK) {
-            sensorData.temperature = temperature;
-            sensorData.humidity = humidity;
-            //ESP_LOGI(tag, "Temperature: %.1f°C, Humidity: %.1f%%", temperature, humidity);
+            float temperature, humidity;
+            esp_err_t res = am2320_get_rht(&dev, &temperature, &humidity);
+            if (res == ESP_OK) {
+                sensorData_sample.temperature = temperature;
+                sensorData_sample.humidity = humidity;
+                //ESP_LOGI(tag, "Temperature: %.1f°C, Humidity: %.1f%%", temperature, humidity);
 
+            }
+            vTaskDelay(pdMS_TO_TICKS(TIME_BETWEEN_SAMPLES));
         }
+
+        sensorData.light = sensorData_sample.light / NUM_SAMPLE;
+        sensorData.soil.humidity = sensorData_sample.soil.humidity / NUM_SAMPLE;
+        sensorData.soil.temperature = sensorData_sample.soil.temperature / NUM_SAMPLE;
+        sensorData.temperature = sensorData_sample.temperature / NUM_SAMPLE;
+        sensorData.humidity = sensorData_sample.humidity / NUM_SAMPLE;
+
         xSemaphoreGive(sensorData.mutex);
-        vTaskDelay(pdMS_TO_TICKS(1000)); // wait 5 seconds
+        vTaskDelay(pdMS_TO_TICKS(SENSOR_SAMPLE_RATE_MS - (TIME_BETWEEN_SAMPLES * NUM_SAMPLE))); // wait
     }
+}
+
+void log_data_serial() {
+    ESP_LOGI("SENSOR_VALS", "%d, %.2f, %.2f, %.2f, %d", sensorData.light, sensorData.temperature, sensorData.humidity, sensorData.soil.temperature, sensorData.soil.humidity);
 }
 
 void controlLoop(void *pvParameters)
@@ -98,9 +129,12 @@ void controlLoop(void *pvParameters)
         {
             rgb_set_color(0, 255, 0);
         }
+        #if EXPERIMENT_LOGGING == 0
+            log_data_serial();
+        #endif
         ESP_LOGI(tag, "Light: %d, Ambient Temp: %.2f, Soil Humidity: %d", sensorData.light, sensorData.temperature, sensorData.soil.humidity);
         xSemaphoreGive(sensorData.mutex);
-        vTaskDelay(pdMS_TO_TICKS(1000)); // wait 5 second
+        vTaskDelay(pdMS_TO_TICKS(CONTROL_DELAY_MS)); // wait
     }
 }
 
