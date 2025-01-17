@@ -18,7 +18,7 @@ uint16_t get_soil_moisture()
 float get_soil_temperature()
 {
     float temp = 0;
-    ESP_ERROR_CHECK(adafruit_stemma_soil_sensor_read_temperature(I2C_NUM, &temp));
+    adafruit_stemma_soil_sensor_read_temperature(I2C_NUM, &temp);
     return temp;
 }
 
