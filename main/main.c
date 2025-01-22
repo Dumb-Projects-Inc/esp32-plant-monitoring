@@ -74,6 +74,8 @@ ssd1306_handle_t ssd1306_dev = NULL;
 
 void sensorLoop(void *pvParameters)
 {
+    init_light_sensor(ADC1_CHANNEL_0);
+
     
     i2c_dev_t dev = {0};
     ESP_ERROR_CHECK(am2320_shared_i2c_init(&dev, I2C_NUM));
@@ -157,7 +159,6 @@ void app_main(void)
     init_buzzer(&b_config);
     init_rgb_led(&rgb_config);
     init_i2c();
-    init_light_sensor(ADC1_CHANNEL_0);
 
     #if LOGGING_WIFI == 0
     init_wifi();

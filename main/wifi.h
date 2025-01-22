@@ -69,8 +69,10 @@ void init_wifi() {
 void http_post_task(void *pvParameters) {
     // Create a buffer in the stack.
     char post_data[150] = {0};
+    xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
     int out = snprintf(post_data, sizeof(post_data), "{\"light\": %d, \"temperature\": %.2f, \"humidity\": %.2f, \"soil_temperature\": %.2f, \"soil_humidity\": %d }", 
     sensorData.light, sensorData.temperature, sensorData.humidity, sensorData.soil.temperature, sensorData.soil.humidity);
+    xSemaphoreGive(sensorData.mutex);
     if(out < 0) {
         ESP_LOGE(TAG, "Failed to create post data");
         vTaskDelete(NULL);
