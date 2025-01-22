@@ -18,9 +18,13 @@ void button_loop(void *Pbargs) {
         current_state = gpio_get_level(args->button_gpio);
         if(current_state != last_state) {
             if (current_state == 0) {
-                args->callback_button_down();
+                if (args->callback_button_down != NULL) {
+                    args->callback_button_down();
+                }
             } else {
-                args->callback_button_up();
+                if (args ->callback_button_up != NULL) {
+                    args->callback_button_up();
+                }
             }
             last_state = current_state;
         }
