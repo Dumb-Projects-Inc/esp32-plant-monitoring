@@ -1,8 +1,7 @@
 #include "button.h"
 
-static TaskHandle_t taskHandle = NULL;
-
 static void IRAM_ATTR button_isr_handler(void* arg) {
+    TaskHandle_t taskHandle = (TaskHandle_t)arg;
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
     vTaskNotifyGiveFromISR(taskHandle, &xHigherPriorityTaskWoken);
@@ -13,12 +12,11 @@ void button_loop(void *Pbargs) {
     PButtonLoopArgs args = Pbargs;
     int last_state = gpio_get_level(args->button_gpio);
     int current_state;
-    int gpio_num;
 
     while (1) {
-        ulTaskNotifyTake(0, portMAX_DELAY);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         current_state = gpio_get_level(args->button_gpio);
-        if(current_state!= last_state) {
+        if(current_state != last_state) {
             if (current_state == 0) {
                 args->callback_button_down();
             } else {
@@ -38,7 +36,6 @@ void init_button(int button_gpio, void (*callback_button_down)(), void (*callbac
     };
     gpio_config(&io_config);
     
-    // This isnt freed as is needed during whole program execution
     PButtonLoopArgs args = malloc(sizeof(buttonLoopArgs));
     if (args == NULL) {
         ESP_LOGE(tag, "Failed to alloc memory to PButton");
@@ -48,9 +45,19 @@ void init_button(int button_gpio, void (*callback_button_down)(), void (*callbac
     args->callback_button_down = callback_button_down;
     args->callback_button_up = callback_button_up;
 
+    char taskName[20];
+    snprintf(taskName, 20, "button_loop_%d", button_gpio);
+    TaskHandle_t taskHandle;
+    xTaskCreate(button_loop, taskName, 1024*2, args, 1, &taskHandle);
 
-    xTaskCreate(button_loop, "button_loop", 1024*2, args, 1, &taskHandle);
-
-    gpio_install_isr_service(0);
-    gpio_isr_handler_add(button_gpio, button_isr_handler, (void*)&taskHandle);
+    static bool isrInstalled = false;
+    if (!isrInstalled) {
+        esp_err_t err = gpio_install_isr_service(0);
+        if (err != ESP_OK) {
+            ESP_LOGI("button_loop", "ISR service install error: %d", err);
+            exit(1);
+        }
+        isrInstalled = true;
+    }
+    gpio_isr_handler_add(button_gpio, button_isr_handler, (void*)taskHandle);
 }
