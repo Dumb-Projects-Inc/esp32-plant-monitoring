@@ -25,9 +25,6 @@
 #include <string.h>
 #include "screen/bitmap.h"
 
-// Layouts
-#include "layouts/humidity_screen.h"
-
 #include "wifi.h"
 
 // OUTPUT PINS
@@ -64,7 +61,6 @@ volatile sensor_data_t sensorData = {
     .humidity = 0,
     .light = 0,
     .mutex = NULL};
-volatile bool display_update_required = false;
 volatile int screen_number = 0;
 volatile const uint8_t (*current_animation)[128] = leaf_animation;
 
@@ -134,7 +130,7 @@ void controlLoop(void *pvParameters)
             xSemaphoreGive(sensorData.mutex);
 
             rgb_set_color(255, 0, 0);
-            // play_song(rondo);
+            play_song(mario);
         }
         else
         {
@@ -149,15 +145,6 @@ void controlLoop(void *pvParameters)
     }
 }
 
-void init_screen(ssd1306_handle_t ssd1306_dev)
-{
-    leaf_animation_params_t params = {
-        .handle = ssd1306_dev,
-        //.frames = animation,
-        .frame_count = 28};
-
-    xTaskCreate(animation_play, "Screen", 4096, (void *)&params, 5, NULL);
-}
 
 void change_screen_plus()
 {
@@ -225,6 +212,7 @@ void app_main(void)
     init_buzzer(&b_config);
     init_rgb_led(&rgb_config);
     init_i2c();
+    animations_init(&ssd1306_dev);
     init_button(GPIO_BTN1_PIN, change_screen_plus, NULL);
     init_button(GPIO_BTN2_PIN, change_screen_minus, NULL);
 #if LOGGING_WIFI == 0
@@ -232,16 +220,9 @@ void app_main(void)
 #endif
 
     sensorData.mutex = xSemaphoreCreateMutex();
-    animations_init(&ssd1306_dev);
 
-    init_screen(ssd1306_dev);
-
+    xTaskCreate(animation_play, "Screen", 4096, ssd1306_dev, 5, NULL);
     xTaskCreate(sensorLoop, "sensorLoop", 4096, NULL, 1, NULL);
     xTaskCreate(controlLoop, "controlLoop", 4096 * 2, NULL, 1, NULL);
 
-    while (1)
-    {
-        humidityScreen(ssd1306_dev);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
 }
