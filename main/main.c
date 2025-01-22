@@ -20,14 +20,13 @@
 #include "peripherals/button.h"
 
 // Animation
-#include "screen/leaf_animation.h"
-#include "screen/settings_animation.h"
+#include "screen/animation_play.h"
 #include "screen/animations.h"
 #include <string.h>
+#include "screen/bitmap.h"
 
 // Layouts
 #include "layouts/humidity_screen.h"
-
 
 // OUTPUT PINS
 #define GPIO_BUZZ_PIN (9)
@@ -49,8 +48,7 @@
 
 #define CONTROL_DELAY_MS (1000)
 
-
-#define EXPERIMENT_LOGGING 0 //0 = on , 1 = off
+#define EXPERIMENT_LOGGING 0 // 0 = on , 1 = off
 
 #define tag "PROGRAM"
 
@@ -62,17 +60,15 @@ volatile sensor_data_t sensorData = {
     .temperature = 0,
     .humidity = 0,
     .light = 0,
-    .mutex = NULL
-};
+    .mutex = NULL};
 volatile bool display_update_required = false;
-
 
 
 ssd1306_handle_t ssd1306_dev = NULL;
 
 void sensorLoop(void *pvParameters)
 {
-    
+
     init_light_sensor(ADC1_CHANNEL_0);
     i2c_dev_t dev = {0};
     ESP_ERROR_CHECK(am2320_shared_i2c_init(&dev, I2C_NUM));
@@ -87,18 +83,19 @@ void sensorLoop(void *pvParameters)
             .humidity = 0,
             .light = 0,
         };
-        for(size_t i = 0; i < NUM_SAMPLE; i++){
+        for (size_t i = 0; i < NUM_SAMPLE; i++)
+        {
             sensorData_sample.light += get_light_value();
             sensorData_sample.soil.humidity += get_soil_moisture();
             sensorData_sample.soil.temperature += get_soil_temperature();
 
             float temperature, humidity;
             esp_err_t res = am2320_get_rht(&dev, &temperature, &humidity);
-            if (res == ESP_OK) {
+            if (res == ESP_OK)
+            {
                 sensorData_sample.temperature = temperature;
                 sensorData_sample.humidity = humidity;
-                //ESP_LOGI(tag, "Temperature: %.1f°C, Humidity: %.1f%%", temperature, humidity);
-
+                // ESP_LOGI(tag, "Temperature: %.1f°C, Humidity: %.1f%%", temperature, humidity);
             }
             vTaskDelay(pdMS_TO_TICKS(TIME_BETWEEN_SAMPLES));
         }
@@ -114,7 +111,8 @@ void sensorLoop(void *pvParameters)
     }
 }
 
-void log_data_serial() {
+void log_data_serial()
+{
     ESP_LOGI("SENSOR_VALS", "%d, %.2f, %.2f, %.2f, %d", sensorData.light, sensorData.temperature, sensorData.humidity, sensorData.soil.temperature, sensorData.soil.humidity);
 }
 
@@ -123,24 +121,34 @@ void controlLoop(void *pvParameters)
     while (1)
     {
         xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
-        if(sensorData.soil.humidity < 600)
+        if (sensorData.soil.humidity < 600)
         {
             rgb_set_color(255, 0, 0);
-            //play_song(doom);  
+            // play_song(doom);
         }
         else
         {
             rgb_set_color(0, 255, 0);
         }
-        #if EXPERIMENT_LOGGING == 0
-            log_data_serial();
-        #endif
+#if EXPERIMENT_LOGGING == 0
+        log_data_serial();
+#endif
         ESP_LOGI(tag, "Light: %d, Ambient Temp: %.2f, Soil Humidity: %d", sensorData.light, sensorData.temperature, sensorData.soil.humidity);
         xSemaphoreGive(sensorData.mutex);
         vTaskDelay(pdMS_TO_TICKS(CONTROL_DELAY_MS)); // wait
     }
 }
 
+void start_leaf_animation(ssd1306_handle_t ssd1306_dev, uint8_t animation[][128])
+{
+    leaf_animation_params_t params = {
+        .handle = ssd1306_dev,
+        .frames = animation,
+        .frame_count = (sizeof(animation) / sizeof(animation[0]))
+        };
+
+    xTaskCreate(animation_play, "HumidityScreenTask", 4096, (void *)&params, 5, NULL);
+}
 
 void app_main(void)
 {
@@ -154,17 +162,15 @@ void app_main(void)
     init_rgb_led(&rgb_config);
     init_i2c();
 
-    
     sensorData.mutex = xSemaphoreCreateMutex();
     animations_init(&ssd1306_dev);
-    xTaskCreate(leaf_animation_play, "HumidityScreenTask", 4096, (void *)&ssd1306_dev, 5, NULL);
+    start_leaf_animation(ssd1306_dev, leaf_animation);
     xTaskCreate(sensorLoop, "sensorLoop", 4096, NULL, 1, NULL);
     xTaskCreate(controlLoop, "controlLoop", 4096, NULL, 1, NULL);
 
-    while(1) {
+    while (1)
+    {
         humidityScreen(ssd1306_dev);
         vTaskDelay(pdMS_TO_TICKS(1000));
-        
     }
-
 }

@@ -11,11 +11,3 @@ void animations_init(ssd1306_handle_t *dev) {
     ssd1306_refresh_gram(*dev);
 }
 
-void play_leaf_animation(ssd1306_handle_t dev) {
-    leaf_animation_play(dev);
-}
-
-// Delay is plus minus 1 second
-void play_settings_animation(ssd1306_handle_t dev, int delay_ms) {
-    settings_animation_play(dev, delay_ms);
-}
