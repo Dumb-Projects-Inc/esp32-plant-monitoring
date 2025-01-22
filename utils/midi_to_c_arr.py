@@ -63,7 +63,7 @@ def main(args):
             data.append(20)
     
     #print song
-    data.insert(0, int(len(data) / 3))
+    data.insert(0, int(len(data)))
     print(data)
 
     
