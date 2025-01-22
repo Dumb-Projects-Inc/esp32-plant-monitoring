@@ -34,49 +34,6 @@ esp_err_t init_buzzer(buzz_config_t *config) {
     return 0;
 }
 
-
-
-
-//This function should be removed down the line, when we can play music
-void all() {
-    
-    
-
-    // Set duty
-    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 4096)); //50% duty
-    // Update duty to apply the new value
-    ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
-    //1000 ms delay
-    ESP_LOGI(BUZZER_TAG, "Playing 1000 Hz.");
-    vTaskDelay((600) / portTICK_PERIOD_MS);
-
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 400)); //50% duty
-    ESP_LOGI(BUZZER_TAG, "Playing 600 Hz.");
-    vTaskDelay((600) / portTICK_PERIOD_MS);
-    
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 800)); //50% duty
-    ESP_LOGI(BUZZER_TAG, "Playing 800 Hz.");
-    vTaskDelay((600) / portTICK_PERIOD_MS);
-
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 1000)); //50% duty
-    ESP_LOGI(BUZZER_TAG, "Playing 1000 Hz.");
-    vTaskDelay((600) / portTICK_PERIOD_MS);
-
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 400)); //50% duty
-    ESP_LOGI(BUZZER_TAG, "Playing 600 Hz.");
-    vTaskDelay((600) / portTICK_PERIOD_MS);
-    
-    ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, 800)); //50% duty
-    ESP_LOGI(BUZZER_TAG, "Playing 800 Hz.");
-    vTaskDelay((600) / portTICK_PERIOD_MS);
-
-    // Set duty
-    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 0)); //0% duty
-    // Update duty to apply the new value
-    ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
-    ESP_LOGI(BUZZER_TAG, "Buzzer off.");
-}
-
 void play_song(int *notes) {
     size_t length = notes[0];
     for (int i = 1; i < length; i += 3) {
@@ -88,7 +45,7 @@ void play_song(int *notes) {
 
 void play_note(int hz, int period) {
     // Set duty
-    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 6000)); //50% duty
+    ESP_ERROR_CHECK(ledc_set_duty(BUZZ_MODE, BUZZ_CHANNEL, 4096)); //50% duty
     // Update duty to apply the new value
     ESP_ERROR_CHECK(ledc_update_duty(BUZZ_MODE, BUZZ_CHANNEL));
     ESP_ERROR_CHECK(ledc_set_freq(BUZZ_MODE, BUZZ_TIMER, hz)); //50% duty

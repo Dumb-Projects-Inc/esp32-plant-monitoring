@@ -132,18 +132,20 @@ void controlLoop(void *pvParameters)
         xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
         if(sensorData.soil.humidity < 600)
         {
+            xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
+
             rgb_set_color(255, 0, 0);
-            //play_song(doom);  
+            play_song(rondo);  
         }
         else
         {
+            xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
+
             rgb_set_color(0, 255, 0);
         }
         #if EXPERIMENT_LOGGING == 0
             log_data_serial();
         #endif
-        ESP_LOGI(tag, "Light: %d, Ambient Temp: %.2f, Soil Humidity: %d", sensorData.light, sensorData.temperature, sensorData.soil.humidity);
-        xSemaphoreGive(sensorData.mutex);
         vTaskDelay(pdMS_TO_TICKS(CONTROL_DELAY_MS)); // wait
     }
 }
@@ -171,7 +173,7 @@ void app_main(void)
     xTaskCreate(leaf_animation_play, "HumidityScreenTask", 4096, (void *)&ssd1306_dev, 5, NULL);
     
     xTaskCreate(sensorLoop, "sensorLoop", 4096, NULL, 1, NULL);
-    xTaskCreate(controlLoop, "controlLoop", 4096, NULL, 1, NULL);
+    xTaskCreate(controlLoop, "controlLoop", 4096*2, NULL, 1, NULL);
     
     while(1) {
         humidityScreen(ssd1306_dev);
