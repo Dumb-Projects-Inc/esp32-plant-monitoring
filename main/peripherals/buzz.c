@@ -34,7 +34,7 @@ esp_err_t init_buzzer(buzz_config_t *config) {
     return 0;
 }
 
-void play_song(int *notes) {
+void play_song(const int *notes) {
     size_t length = notes[0];
     for (int i = 1; i < length; i += 3) {
         play_note(notes[i], notes[i+1]);

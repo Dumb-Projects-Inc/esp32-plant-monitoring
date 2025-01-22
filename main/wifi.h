@@ -13,7 +13,7 @@
 #include "esp_http_client.h"
 
 
-static const char *TAG = "WIFI";
+static const char *WIFI_TAG = "WIFI";
 
 extern volatile sensor_data_t sensorData;
 
@@ -50,9 +50,6 @@ void init_wifi() {
     ESP_ERROR_CHECK(esp_wifi_sta_wpa2_ent_set_username((uint8_t *)wifi_username, strlen(wifi_username)));
     ESP_ERROR_CHECK(esp_wifi_sta_wpa2_ent_set_password((uint8_t *)wifi_password, strlen(wifi_password)));
 
-    // Optionally set a CA certificate
-    // ESP_ERROR_CHECK(esp_wifi_sta_wpa2_ent_set_ca_cert(ca_cert_pem, ca_cert_len));
-
     // Enable WPA2 Enterprise
     ESP_ERROR_CHECK(esp_wifi_sta_wpa2_ent_enable());
 
@@ -74,7 +71,7 @@ void http_post_task(void *pvParameters) {
     sensorData.light, sensorData.temperature, sensorData.humidity, sensorData.soil.temperature, sensorData.soil.humidity);
     xSemaphoreGive(sensorData.mutex);
     if(out < 0) {
-        ESP_LOGE(TAG, "Failed to create post data");
+        ESP_LOGE(WIFI_TAG, "Failed to create post data");
         vTaskDelete(NULL);
     }
     esp_http_client_config_t config = {
@@ -90,11 +87,11 @@ void http_post_task(void *pvParameters) {
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "HTTP POST Status = %d, Content length = %lld",
+        ESP_LOGI(WIFI_TAG, "HTTP POST Status = %d, Content length = %lld",
                  esp_http_client_get_status_code(client),
                  esp_http_client_get_content_length(client));
     } else {
-        ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
+        ESP_LOGE(WIFI_TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
     }
 
     esp_http_client_cleanup(client);
