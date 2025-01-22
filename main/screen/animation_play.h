@@ -7,7 +7,6 @@
 
 typedef struct {
     ssd1306_handle_t handle;    
-    const uint8_t (*frames)[128]; 
     size_t frame_count;          
 } leaf_animation_params_t;
 

@@ -50,9 +50,8 @@
 
 #define CONTROL_DELAY_MS (5000)
 
-
-#define EXPERIMENT_LOGGING 0 //0 = on , 1 = off
-#define LOGGING_WIFI 0 //0 = on , 1 = off
+#define EXPERIMENT_LOGGING 0 // 0 = on , 1 = off
+#define LOGGING_WIFI 0       // 0 = on , 1 = off
 
 #define tag "PROGRAM"
 
@@ -66,7 +65,8 @@ volatile sensor_data_t sensorData = {
     .light = 0,
     .mutex = NULL};
 volatile bool display_update_required = false;
-
+volatile int screen_number = 0;
+volatile const uint8_t (*current_animation)[128] = leaf_animation;
 
 ssd1306_handle_t ssd1306_dev = NULL;
 
@@ -74,7 +74,6 @@ void sensorLoop(void *pvParameters)
 {
     init_light_sensor(ADC1_CHANNEL_0);
 
-    
     i2c_dev_t dev = {0};
     ESP_ERROR_CHECK(am2320_shared_i2c_init(&dev, I2C_NUM));
 
@@ -89,7 +88,8 @@ void sensorLoop(void *pvParameters)
         };
 
         // Take the average over multiple samples.
-        for(size_t i = 0; i < NUM_SAMPLE; i++){
+        for (size_t i = 0; i < NUM_SAMPLE; i++)
+        {
             sensorData_sample.light += get_light_value();
             sensorData_sample.soil.humidity += get_soil_moisture();
             sensorData_sample.soil.temperature += get_soil_temperature();
@@ -115,12 +115,13 @@ void sensorLoop(void *pvParameters)
     }
 }
 
-void log_data_serial() {
-    #if LOGGING_WIFI == 0
+void log_data_serial()
+{
+#if LOGGING_WIFI == 0
     post(sensorData);
-    #else
+#else
     ESP_LOGI("SENSOR_VALS", "%d, %.2f, %.2f, %.2f, %d", sensorData.light, sensorData.temperature, sensorData.humidity, sensorData.soil.temperature, sensorData.soil.humidity);
-    #endif
+#endif
 }
 
 void controlLoop(void *pvParameters)
@@ -130,33 +131,87 @@ void controlLoop(void *pvParameters)
         xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
         if (sensorData.soil.humidity < 600)
         {
-            xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
+            xSemaphoreGive(sensorData.mutex);
 
             rgb_set_color(255, 0, 0);
-            play_song(rondo);  
+            // play_song(rondo);
         }
         else
         {
-            xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
+            xSemaphoreGive(sensorData.mutex);
 
             rgb_set_color(0, 255, 0);
         }
-        #if EXPERIMENT_LOGGING == 0
-            log_data_serial();
-        #endif
+#if EXPERIMENT_LOGGING == 0
+        log_data_serial();
+#endif
         vTaskDelay(pdMS_TO_TICKS(CONTROL_DELAY_MS)); // wait
     }
 }
 
-void start_leaf_animation(ssd1306_handle_t ssd1306_dev, uint8_t animation[][128])
+void init_screen(ssd1306_handle_t ssd1306_dev)
 {
     leaf_animation_params_t params = {
         .handle = ssd1306_dev,
-        .frames = animation,
-        .frame_count = (sizeof(animation) / sizeof(animation[0]))
-        };
+        //.frames = animation,
+        .frame_count = 28};
 
-    xTaskCreate(animation_play, "HumidityScreenTask", 4096, (void *)&params, 5, NULL);
+    xTaskCreate(animation_play, "Screen", 4096, (void *)&params, 5, NULL);
+}
+
+void change_screen_plus()
+{
+    ssd1306_clear_screen(ssd1306_dev, false);
+    if (screen_number == 2)
+    {
+        screen_number = 0;
+    }
+    else
+    {
+        screen_number++;
+    }
+    if (screen_number == 0)
+    {
+        current_animation = leaf_animation;
+    }
+    else if (screen_number == 1)
+    {
+        current_animation = heart_rate_animation;
+    }
+    else
+    {
+        current_animation = temperature_animation;
+    }
+
+    printf("Screen number: %d\n", screen_number);
+}
+
+void change_screen_minus()
+{
+    ssd1306_clear_screen(ssd1306_dev, false);
+    if (screen_number == 0)
+    {
+        screen_number = 2;
+    }
+    else
+    {
+        screen_number--;
+    }
+
+    if (screen_number == 0)
+    {
+        current_animation = leaf_animation;
+    }
+    else if (screen_number == 1)
+    {
+        current_animation = heart_rate_animation;
+    }
+    else
+    {
+        current_animation = temperature_animation;
+    }
+
+    printf("Screen number: %d\n", screen_number);
 }
 
 void app_main(void)
@@ -170,20 +225,22 @@ void app_main(void)
     init_buzzer(&b_config);
     init_rgb_led(&rgb_config);
     init_i2c();
-
-    #if LOGGING_WIFI == 0
+    init_button(GPIO_BTN1_PIN, change_screen_plus, NULL);
+    init_button(GPIO_BTN2_PIN, change_screen_minus, NULL);
+#if LOGGING_WIFI == 0
     init_wifi();
-    #endif
-    
+#endif
+
     sensorData.mutex = xSemaphoreCreateMutex();
     animations_init(&ssd1306_dev);
-    
-    start_leaf_animation(ssd1306_dev, leaf_animation);
-    
+
+    init_screen(ssd1306_dev);
+
     xTaskCreate(sensorLoop, "sensorLoop", 4096, NULL, 1, NULL);
-    xTaskCreate(controlLoop, "controlLoop", 4096*2, NULL, 1, NULL);
-    
-    while(1) {
+    xTaskCreate(controlLoop, "controlLoop", 4096 * 2, NULL, 1, NULL);
+
+    while (1)
+    {
         humidityScreen(ssd1306_dev);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }

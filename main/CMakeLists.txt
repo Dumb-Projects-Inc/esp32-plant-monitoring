@@ -7,5 +7,4 @@ idf_component_register(SRCS "main.c"
                             "screen/animation_play.c" 
                             "layouts/humidity_screen.c"
                             "screen/display_text.c"
-                            "screen/bitmap.c"
                     INCLUDE_DIRS "." "./peripherals" "./sensors" "./layouts" "./screen")
