@@ -82,7 +82,6 @@ void sensorLoop(void *pvParameters)
 
     while (1)
     {
-        xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
         sensor_data_t sensorData_sample = {
             .soil.humidity = 0,
             .soil.temperature = 0,
@@ -90,6 +89,8 @@ void sensorLoop(void *pvParameters)
             .humidity = 0,
             .light = 0,
         };
+
+        // Take the average over multiple samples.
         for(size_t i = 0; i < NUM_SAMPLE; i++){
             sensorData_sample.light += get_light_value();
             sensorData_sample.soil.humidity += get_soil_moisture();
@@ -104,7 +105,7 @@ void sensorLoop(void *pvParameters)
             }
             vTaskDelay(pdMS_TO_TICKS(TIME_BETWEEN_SAMPLES));
         }
-
+        xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
         sensorData.light = sensorData_sample.light / NUM_SAMPLE;
         sensorData.soil.humidity = sensorData_sample.soil.humidity / NUM_SAMPLE;
         sensorData.soil.temperature = sensorData_sample.soil.temperature / NUM_SAMPLE;
