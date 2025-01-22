@@ -28,6 +28,8 @@
 // Layouts
 #include "layouts/humidity_screen.h"
 
+#include "wifi.h"
+
 // OUTPUT PINS
 #define GPIO_BUZZ_PIN (9)
 #define GPIO_REDLED_PIN (1)
@@ -42,13 +44,15 @@
 #define GPIO_LIGHTSENSOR_PIN (0)
 
 // Sample rates and waits
-#define SENSOR_SAMPLE_RATE_MS (500)
+#define SENSOR_SAMPLE_RATE_MS (1000)
 #define NUM_SAMPLE 1
 #define TIME_BETWEEN_SAMPLES 20
 
-#define CONTROL_DELAY_MS (1000)
+#define CONTROL_DELAY_MS (5000)
 
-#define EXPERIMENT_LOGGING 0 // 0 = on , 1 = off
+
+#define EXPERIMENT_LOGGING 0 //0 = on , 1 = off
+#define LOGGING_WIFI 0 //0 = on , 1 = off
 
 #define tag "PROGRAM"
 
@@ -68,14 +72,14 @@ ssd1306_handle_t ssd1306_dev = NULL;
 
 void sensorLoop(void *pvParameters)
 {
-
     init_light_sensor(ADC1_CHANNEL_0);
+
+    
     i2c_dev_t dev = {0};
     ESP_ERROR_CHECK(am2320_shared_i2c_init(&dev, I2C_NUM));
 
     while (1)
     {
-        xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
         sensor_data_t sensorData_sample = {
             .soil.humidity = 0,
             .soil.temperature = 0,
@@ -83,8 +87,9 @@ void sensorLoop(void *pvParameters)
             .humidity = 0,
             .light = 0,
         };
-        for (size_t i = 0; i < NUM_SAMPLE; i++)
-        {
+
+        // Take the average over multiple samples.
+        for(size_t i = 0; i < NUM_SAMPLE; i++){
             sensorData_sample.light += get_light_value();
             sensorData_sample.soil.humidity += get_soil_moisture();
             sensorData_sample.soil.temperature += get_soil_temperature();
@@ -95,11 +100,10 @@ void sensorLoop(void *pvParameters)
             {
                 sensorData_sample.temperature = temperature;
                 sensorData_sample.humidity = humidity;
-                // ESP_LOGI(tag, "Temperature: %.1f°C, Humidity: %.1f%%", temperature, humidity);
             }
             vTaskDelay(pdMS_TO_TICKS(TIME_BETWEEN_SAMPLES));
         }
-
+        xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
         sensorData.light = sensorData_sample.light / NUM_SAMPLE;
         sensorData.soil.humidity = sensorData_sample.soil.humidity / NUM_SAMPLE;
         sensorData.soil.temperature = sensorData_sample.soil.temperature / NUM_SAMPLE;
@@ -111,9 +115,12 @@ void sensorLoop(void *pvParameters)
     }
 }
 
-void log_data_serial()
-{
+void log_data_serial() {
+    #if LOGGING_WIFI == 0
+    post(sensorData);
+    #else
     ESP_LOGI("SENSOR_VALS", "%d, %.2f, %.2f, %.2f, %d", sensorData.light, sensorData.temperature, sensorData.humidity, sensorData.soil.temperature, sensorData.soil.humidity);
+    #endif
 }
 
 void controlLoop(void *pvParameters)
@@ -123,18 +130,20 @@ void controlLoop(void *pvParameters)
         xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
         if (sensorData.soil.humidity < 600)
         {
+            xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
+
             rgb_set_color(255, 0, 0);
-            // play_song(doom);
+            play_song(rondo);  
         }
         else
         {
+            xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
+
             rgb_set_color(0, 255, 0);
         }
-#if EXPERIMENT_LOGGING == 0
-        log_data_serial();
-#endif
-        ESP_LOGI(tag, "Light: %d, Ambient Temp: %.2f, Soil Humidity: %d", sensorData.light, sensorData.temperature, sensorData.soil.humidity);
-        xSemaphoreGive(sensorData.mutex);
+        #if EXPERIMENT_LOGGING == 0
+            log_data_serial();
+        #endif
         vTaskDelay(pdMS_TO_TICKS(CONTROL_DELAY_MS)); // wait
     }
 }
@@ -162,14 +171,19 @@ void app_main(void)
     init_rgb_led(&rgb_config);
     init_i2c();
 
+    #if LOGGING_WIFI == 0
+    init_wifi();
+    #endif
+    
     sensorData.mutex = xSemaphoreCreateMutex();
     animations_init(&ssd1306_dev);
+    
     start_leaf_animation(ssd1306_dev, leaf_animation);
+    
     xTaskCreate(sensorLoop, "sensorLoop", 4096, NULL, 1, NULL);
-    xTaskCreate(controlLoop, "controlLoop", 4096, NULL, 1, NULL);
-
-    while (1)
-    {
+    xTaskCreate(controlLoop, "controlLoop", 4096*2, NULL, 1, NULL);
+    
+    while(1) {
         humidityScreen(ssd1306_dev);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
