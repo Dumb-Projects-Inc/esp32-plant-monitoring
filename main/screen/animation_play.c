@@ -1,116 +1,39 @@
-#include <stdio.h>
-#include <string.h>
-#include "ssd1306.h"
 #include "animation_play.h"
-#include "display_text.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include <freertos/semphr.h>
-#include "sensor_data.h"
-
-extern volatile sensor_data_t sensorData;
-extern volatile int screen_number;
-extern volatile const uint8_t (*current_animation)[128];
+#define I2C_MASTER_NUM I2C_NUM_0
+#define OLED_ADDR 0x3C
 
 void animation_play(ssd1306_handle_t handle)
 {
-
-    int frame = 0;
-    static char previous_soil_humidity_str[16] = "0";
-    static char previous_env_humidity_str[16] = "0";
-    static char previous_soil_temp_str[16] = "0";
-    static char previous_env_temp_str[16] = "0";
-    static char previous_light_temp_str[16] = "0";
-    int min_raw = 200;
-    int max_raw = 2000;
-    float soil_humidity_percentage = 0;
+    static size_t frame_index = 0;
 
     while (1)
     {
-        for (int y = 0; y < 48; y++)
+        const screen_t *screen = get_current_screen(); // fetches the pointer to the current screen
+        if (screen == NULL)
         {
-            ssd1306_draw_line(handle, 0, y, 32, y, 0);
+            printf("No screen found\n");
+            continue;
         }
-        ssd1306_draw_bitmap(handle, 5, 16, current_animation[frame], 32, 32);
-        ssd1306_refresh_gram(handle);
-        if (frame == 27)
-        {
-            frame = 0;
-        }
-        else
-        {
-            frame++;
-        }
+        screen->update(handle);
 
-        xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
-        if (screen_number == 0)
+        if (screen->animation != NULL && screen->animation_frames > 0) // if there is an animation set to play, then play it!
         {
-            char soil_humidity_str[16];
-            soil_humidity_percentage = ((float)(sensorData.soil.humidity - min_raw) / (max_raw - min_raw)) * 100;
-            snprintf(soil_humidity_str, sizeof(soil_humidity_str), "%.2f", soil_humidity_percentage);
-
-            char env_humidity_str[16];
-            snprintf(env_humidity_str, sizeof(env_humidity_str), "%.2f", sensorData.humidity);
-
-            if (strcmp(soil_humidity_str, previous_soil_humidity_str) != 0)
+            for (int y = 16; y < 48; y++)
             {
-                display_text(handle, soil_humidity_str, 80, 12, 96, 18, false);
-                strcpy(previous_soil_humidity_str, soil_humidity_str);
+                ssd1306_draw_line(handle, 0, y, 32, y, 0);
             }
 
-            if (strcmp(env_humidity_str, previous_env_humidity_str) != 0)
-            {
-                display_text(handle, env_humidity_str, 0, 12, 96, 33, false);
-                strcpy(previous_env_humidity_str, env_humidity_str);
-            }
-
-            display_text(handle, "Humidity", 80, 16, 0, 0, true);
-            display_text(handle, "Soil :", 80, 12, 59, 18, false);
-            display_text(handle, "Env  :", 0, 12, 59, 33, false);
+            ssd1306_draw_bitmap(handle, 5, 16, screen->animation[frame_index], 32, 32);
+            frame_index = (frame_index + 1) % screen->animation_frames; // increments the index of frames and resets ALL the way back to frame 1 when it reaches the end of index
         }
-        else if (screen_number == 1)
-        {
-            char soil_temp_str[16];
-            snprintf(soil_temp_str, sizeof(soil_temp_str), "%.2f", sensorData.soil.temperature);
-
-            char env_temp_str[16];
-            snprintf(env_temp_str, sizeof(env_temp_str), "%.2f", sensorData.humidity);
-
-            if (strcmp(soil_temp_str, previous_soil_temp_str) != 0)
-            {
-                display_text(handle, soil_temp_str, 80, 12, 96, 18, false);
-                strcpy(previous_soil_temp_str, soil_temp_str);
-            }
-
-            if (strcmp(env_temp_str, previous_env_temp_str) != 0)
-            {
-                display_text(handle, env_temp_str, 0, 12, 96, 33, false);
-                strcpy(previous_env_temp_str, env_temp_str);
-            }
-
-            display_text(handle, "Temp", 80, 16, 0, 0, true);
-            display_text(handle, "Soil :", 80, 12, 59, 18, false);
-            display_text(handle, "Env  :", 0, 12, 59, 33, false);
-        }
-        else if (screen_number == 2)
-        {
-
-            char light_str[16];
-            snprintf(light_str, sizeof(light_str), "%d", sensorData.light);
-
-            if (strcmp(light_str, previous_light_temp_str) != 0)
-            {
-                display_text(handle, light_str, 80, 12, 96, 25, false);
-                strcpy(previous_light_temp_str, light_str);
-            }
-
-            display_text(handle, "Light", 80, 16, 0, 0, true);
-            display_text(handle, "Soil :", 80, 12, 59, 25, false);
-
-        }
-
-        xSemaphoreGive(sensorData.mutex);
-
-        vTaskDelay(pdMS_TO_TICKS(42));
+        ssd1306_refresh_gram(handle);   // refreshes the screen. This function is the reason why the screen is smooth and not flickering
+        vTaskDelay(pdMS_TO_TICKS(42)); // waits
     }
+}
+
+void animations_init(ssd1306_handle_t *dev)
+{
+    *dev = ssd1306_create(I2C_MASTER_NUM, OLED_ADDR);
+    ssd1306_clear_screen(*dev, 0x00);
+    ssd1306_refresh_gram(*dev);
 }
