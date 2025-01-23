@@ -12,10 +12,13 @@
 
 #include "esp_http_client.h"
 
+#define MAX_HTTP_OUTPUT_BUFFER 2048
+
 
 static const char *WIFI_TAG = "WIFI";
 
 extern volatile sensor_data_t sensorData;
+extern volatile rule_limits_t limits;
 
 void init_wifi() {
         esp_err_t ret = nvs_flash_init();
@@ -63,6 +66,32 @@ void init_wifi() {
     ESP_ERROR_CHECK(esp_wifi_connect());
 }
 
+
+esp_err_t _http_event_handler(esp_http_client_event_t *evt)
+{
+
+    switch(evt->event_id) {
+        // Read the data sent from server
+        case HTTP_EVENT_ON_DATA:
+            ESP_LOGI(WIFI_TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
+            // Print the data as a string
+            char *data = malloc(evt->data_len + 1);
+            memcpy(data, evt->data, evt->data_len);
+            data[evt->data_len] = '\0'; // Make sure the string is null terminated
+
+            ESP_LOGI(WIFI_TAG, "HTTP_EVENT_ON_DATA, data=%s", data);
+            
+            //Parse the data
+            char *token = strtok(data, ",");
+            
+            free(data);
+            break;
+        default:
+            break;
+    }
+    return ESP_OK;
+}
+
 void http_post_task(void *pvParameters) {
     // Create a buffer in the stack.
     char post_data[150] = {0};
@@ -74,8 +103,11 @@ void http_post_task(void *pvParameters) {
         ESP_LOGE(WIFI_TAG, "Failed to create post data");
         vTaskDelete(NULL);
     }
+
     esp_http_client_config_t config = {
         .url = "http://172.232.139.206:1234/data",
+
+        .event_handler = _http_event_handler,
     };
 
     esp_http_client_handle_t client = esp_http_client_init(&config);

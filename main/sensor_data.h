@@ -18,3 +18,11 @@ typedef struct {
     ALIGN int light;
     ALIGN SemaphoreHandle_t mutex;
 } sensor_data_t;
+
+typedef struct { 
+    int light;
+    float temperature;
+    float humidity;
+    float soil_temperature;
+    float soil_humidity;
+} rule_limits_t;

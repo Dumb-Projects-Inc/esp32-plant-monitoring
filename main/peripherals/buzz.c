@@ -65,7 +65,20 @@ void pause_note(int period) {
 }
 
 void song_task(void *pvParameters) {
-    //int **song = pvParameters;
-    ESP_LOGI(BUZZER_TAG, "%d", 1);
-    //play_song(song);
+    int song = *(int*)pvParameters;
+    
+    switch(song) {
+        case 0:
+            play_song(mario);
+            break;
+        case 1:
+            play_song(doom);
+            break;
+        default:
+            play_song(rondo);
+            break;
+    }
+
+    //Delete task when done
+    vTaskDelete(NULL);
 }

@@ -7,6 +7,7 @@
 
 #include <driver/gpio.h>
 #include "esp_log.h"
+#include "esp_random.h"
 #include "peripherals/buzz.h"
 #include "peripherals/rgb.h"
 
@@ -61,6 +62,15 @@ volatile sensor_data_t sensorData = {
     .humidity = 0,
     .light = 0,
     .mutex = NULL};
+
+volatile rule_limits_t limits = {
+    .light = 0,
+    .temperature = 0,
+    .humidity = 0,
+    .soil_temperature = 0,
+    .soil_humidity = 600,
+};
+
 volatile int screen_number = 0;
 volatile const uint8_t (*current_animation)[128] = leaf_animation;
 
@@ -125,12 +135,19 @@ void controlLoop(void *pvParameters)
     while (1)
     {
         xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
-        if (sensorData.soil.humidity < 600)
+        if (sensorData.soil.humidity < limits.soil_humidity && sensorData.soil.temperature < limits.soil_temperature && sensorData.light > limits.light 
+            && sensorData.temperature > limits.temperature && sensorData.humidity > limits.humidity
+            && sensorData.soil.humidity > 0)
         {
             xSemaphoreGive(sensorData.mutex);
 
             rgb_set_color(255, 0, 0);
-            play_song(mario);
+            //Only start the song task if it is not already running
+            if (xTaskGetHandle("song_task") == NULL) {
+                int song = esp_random() % 3;
+                xTaskCreate(song_task, "song_task", 4096, (void*)&song, 1, NULL);
+            }
+            
         }
         else
         {
