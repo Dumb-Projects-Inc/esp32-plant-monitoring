@@ -134,9 +134,9 @@ void controlLoop(void *pvParameters)
     while (1)
     {
         xSemaphoreTake(sensorData.mutex, portMAX_DELAY);
-        if (sensorData.soil.humidity < limits.soil_humidity && sensorData.soil.temperature < limits.soil_temperature && sensorData.light > limits.light 
-            && sensorData.temperature > limits.temperature && sensorData.humidity > limits.humidity
-            && sensorData.soil.humidity > 0)
+        if (sensorData.soil.humidity < limits.soil_humidity && sensorData.light < limits.light 
+            && sensorData.temperature < limits.temperature && sensorData.humidity < limits.humidity
+            && sensorData.soil.temperature < limits.soil_temperature && sensorData.soil.humidity > 0)
         {
             xSemaphoreGive(sensorData.mutex);
 

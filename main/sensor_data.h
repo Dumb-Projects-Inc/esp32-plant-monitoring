@@ -24,5 +24,5 @@ typedef struct {
     float temperature;
     float humidity;
     float soil_temperature;
-    float soil_humidity;
+    int soil_humidity;
 } rule_limits_t;

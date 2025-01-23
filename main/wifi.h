@@ -84,6 +84,14 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
             //Parse the data
             char *token = strtok(data, ",");
             
+            limits.light = atoi(token);
+            limits.temperature = atof(strtok(NULL, ","));
+            limits.humidity = atof(strtok(NULL, ","));
+            limits.soil_temperature = atof(strtok(NULL, ","));
+            limits.soil_humidity = atoi(strtok(NULL, ","));
+
+            ESP_LOGI(WIFI_TAG, "Limits: %d, %.2f, %.2f, %.2f, %d", limits.light, limits.temperature, limits.humidity, limits.soil_temperature, limits.soil_humidity);
+
             free(data);
             break;
         default:
