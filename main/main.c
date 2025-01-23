@@ -19,11 +19,11 @@
 
 #include "peripherals/button.h"
 
-// Animation
+// screen
 #include "screen/animation_play.h"
-#include "screen/animations.h"
 #include <string.h>
 #include "screen/bitmap.h"
+#include "screen/screen_manager.h"
 
 #include "wifi.h"
 
@@ -48,7 +48,7 @@
 #define CONTROL_DELAY_MS (5000)
 
 #define EXPERIMENT_LOGGING 0 // 0 = on , 1 = off
-#define LOGGING_WIFI 0       // 0 = on , 1 = off
+#define LOGGING_WIFI 1       // 0 = on , 1 = off
 
 #define tag "PROGRAM"
 
@@ -62,7 +62,6 @@ volatile sensor_data_t sensorData = {
     .light = 0,
     .mutex = NULL};
 volatile int screen_number = 0;
-volatile const uint8_t (*current_animation)[128] = leaf_animation;
 
 ssd1306_handle_t ssd1306_dev = NULL;
 
@@ -130,7 +129,7 @@ void controlLoop(void *pvParameters)
             xSemaphoreGive(sensorData.mutex);
 
             rgb_set_color(255, 0, 0);
-            play_song(mario);
+            // play_song(mario);
         }
         else
         {
@@ -145,62 +144,6 @@ void controlLoop(void *pvParameters)
     }
 }
 
-
-void change_screen_plus()
-{
-    ssd1306_clear_screen(ssd1306_dev, false);
-    if (screen_number == 2)
-    {
-        screen_number = 0;
-    }
-    else
-    {
-        screen_number++;
-    }
-    if (screen_number == 0)
-    {
-        current_animation = leaf_animation;
-    }
-    else if (screen_number == 1)
-    {
-        current_animation = heart_rate_animation;
-    }
-    else
-    {
-        current_animation = temperature_animation;
-    }
-
-    printf("Screen number: %d\n", screen_number);
-}
-
-void change_screen_minus()
-{
-    ssd1306_clear_screen(ssd1306_dev, false);
-    if (screen_number == 0)
-    {
-        screen_number = 2;
-    }
-    else
-    {
-        screen_number--;
-    }
-
-    if (screen_number == 0)
-    {
-        current_animation = leaf_animation;
-    }
-    else if (screen_number == 1)
-    {
-        current_animation = heart_rate_animation;
-    }
-    else
-    {
-        current_animation = temperature_animation;
-    }
-
-    printf("Screen number: %d\n", screen_number);
-}
-
 void app_main(void)
 {
     buzz_config_t b_config = {.gpio_num = GPIO_BUZZ_PIN};
@@ -213,16 +156,16 @@ void app_main(void)
     init_rgb_led(&rgb_config);
     init_i2c();
     animations_init(&ssd1306_dev);
-    init_button(GPIO_BTN1_PIN, change_screen_plus, NULL);
-    init_button(GPIO_BTN2_PIN, change_screen_minus, NULL);
+    screen_manager_init();
+    init_button(GPIO_BTN1_PIN, next_screen, NULL);
+    init_button(GPIO_BTN2_PIN, previous_screen, NULL);
 #if LOGGING_WIFI == 0
     init_wifi();
 #endif
 
     sensorData.mutex = xSemaphoreCreateMutex();
 
-    xTaskCreate(animation_play, "Screen", 4096, ssd1306_dev, 5, NULL);
+    xTaskCreate(animation_play, "Screen", 4096 * 2, ssd1306_dev, 1, NULL);
     xTaskCreate(sensorLoop, "sensorLoop", 4096, NULL, 1, NULL);
     xTaskCreate(controlLoop, "controlLoop", 4096 * 2, NULL, 1, NULL);
-
 }
