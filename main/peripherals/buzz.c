@@ -74,8 +74,11 @@ void song_task(void *pvParameters) {
         case 1:
             play_song(doom);
             break;
-        default:
+        case 2:
             play_song(rondo);
+            break;
+        default:
+            play_song(megalovania);
             break;
     }
 

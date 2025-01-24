@@ -142,7 +142,7 @@ void controlLoop(void *pvParameters)
             rgb_set_color(255, 0, 0);
             //Only start the song task if it is not already running
             if (xTaskGetHandle("song_task") == NULL) {
-                int song = esp_random() % 3;
+                int song = esp_random() % 4;
                 xTaskCreate(song_task, "song_task", 4096, (void*)&song, 1, NULL);
             }
             

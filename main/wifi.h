@@ -48,7 +48,7 @@ void init_wifi() {
     wifi_config_t wifi_config = {};
     strcpy((char *)wifi_config.sta.ssid, "DTUsecure");
 
-    // Set WPA2 Enterprise username and password
+    // Set WPA2 Enterprise username and password Deprecated but it works
     ESP_ERROR_CHECK(esp_wifi_sta_wpa2_ent_set_identity((uint8_t *)wifi_username, strlen(wifi_username)));
     ESP_ERROR_CHECK(esp_wifi_sta_wpa2_ent_set_username((uint8_t *)wifi_username, strlen(wifi_username)));
     ESP_ERROR_CHECK(esp_wifi_sta_wpa2_ent_set_password((uint8_t *)wifi_password, strlen(wifi_password)));
