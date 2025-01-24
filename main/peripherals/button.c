@@ -8,28 +8,46 @@ static void IRAM_ATTR button_isr_handler(void* arg) {
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
+/*
+Parts of this functions are inspired by the components demo for course 02112
+*/
 void button_loop(void *Pbargs) {
     PButtonLoopArgs args = Pbargs;
     int last_state = gpio_get_level(args->button_gpio);
     int current_state;
+    const TickType_t debounce_delay = pdMS_TO_TICKS(50);
 
-    while (1) {
+    while (1)
+    {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         current_state = gpio_get_level(args->button_gpio);
-        if(current_state != last_state) {
-            if (current_state == 0) {
-                if (args->callback_button_down != NULL) {
-                    args->callback_button_down();
+
+        if (current_state != last_state)
+        {
+            vTaskDelay(debounce_delay);
+            int stable_state = gpio_get_level(args->button_gpio);
+            if (stable_state == current_state)
+            {
+                if (current_state == 0)
+                {
+                    if (args->callback_button_down != NULL)
+                    {
+                        args->callback_button_down();
+                    }
                 }
-            } else {
-                if (args ->callback_button_up != NULL) {
-                    args->callback_button_up();
+                else
+                {
+                    if (args->callback_button_up != NULL)
+                    {
+                        args->callback_button_up();
+                    }
                 }
+                last_state = current_state;
             }
-            last_state = current_state;
         }
     }
 }
+
 
 void init_button(int button_gpio, void (*callback_button_down)(), void (*callback_button_up)()) {
     gpio_config_t io_config = {
