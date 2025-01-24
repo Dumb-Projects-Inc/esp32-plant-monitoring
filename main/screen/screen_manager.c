@@ -36,6 +36,13 @@ void previous_screen() // same thing as the next_screen but it decrements the in
     xSemaphoreGive(screen_mutex);
 }
 
+void set_screen_number(int screen_number) // same thing as the next_screen but it decrements the index instead
+{
+    xSemaphoreTake(screen_mutex, portMAX_DELAY);
+    current_screen_index = screen_number;
+    xSemaphoreGive(screen_mutex);
+}
+
 const screen_t *get_current_screen() // fetches the screen and return it as a pointer to the screen_t struct
 {
     xSemaphoreTake(screen_mutex, portMAX_DELAY);
@@ -59,12 +66,12 @@ void update_humidity_screen(ssd1306_handle_t handle) // updates the values of th
     char env_humidity_str[16];
 
     snprintf(soil_humidity_str, sizeof(soil_humidity_str), "%d", sensorData.soil.humidity);
-    snprintf(env_humidity_str, sizeof(env_humidity_str), "%.2f", sensorData.humidity);
+    snprintf(env_humidity_str, sizeof(env_humidity_str), "%.1f", sensorData.humidity);
 
     ssd1306_draw_string(handle, 0, 0, (const uint8_t *)"Humidity", 16, true);
-    ssd1306_draw_string(handle, 96, 20, (const uint8_t *)soil_humidity_str, 12, true);
+    ssd1306_draw_string(handle, 100, 20, (const uint8_t *)soil_humidity_str, 12, true);
     ssd1306_draw_string(handle, 64, 20, (const uint8_t *)"Soil: ", 12, true);
-    ssd1306_draw_string(handle, 96, 36, (const uint8_t *)env_humidity_str, 12, true);
+    ssd1306_draw_string(handle, 100, 36, (const uint8_t *)env_humidity_str, 12, true);
     ssd1306_draw_string(handle, 64, 36, (const uint8_t *)"Env: ", 12, true);
 }
 
@@ -72,15 +79,15 @@ void update_temperature_screen(ssd1306_handle_t handle) // updates the values of
 {
     ssd1306_clear_screen(handle, 0);
     char soil_temp_str[16];
-    char env_temp_str[16];
+    char env_temp_str[16] = {0};
 
-    snprintf(soil_temp_str, sizeof(soil_temp_str), "%.2f", sensorData.soil.temperature);
-    snprintf(env_temp_str, sizeof(env_temp_str), "%.2f", sensorData.temperature);
+    snprintf(soil_temp_str, sizeof(soil_temp_str), "%.1f", sensorData.soil.temperature);
+    snprintf(env_temp_str, sizeof(env_temp_str), "%.1f", sensorData.temperature);
 
     ssd1306_draw_string(handle, 0, 0, (const uint8_t *)"Temperature", 16, true);
-    ssd1306_draw_string(handle, 96, 20, (const uint8_t *)soil_temp_str, 12, true);
+    ssd1306_draw_string(handle, 100, 20, (const uint8_t *)soil_temp_str, 12, true);
     ssd1306_draw_string(handle, 64, 20, (const uint8_t *)"Soil: ", 12, true);
-    ssd1306_draw_string(handle, 96, 36, (const uint8_t *)env_temp_str, 12, true);
+    ssd1306_draw_string(handle, 100, 36, (const uint8_t *)env_temp_str, 12, true);
     ssd1306_draw_string(handle, 64, 36, (const uint8_t *)"Env : ", 12, true);
 }
 
@@ -91,6 +98,6 @@ void update_light_screen(ssd1306_handle_t handle) // updates the values of the s
     snprintf(light_str, sizeof(light_str), "%d", sensorData.light);
 
     ssd1306_draw_string(handle, 0, 0, (const uint8_t *)"Light", 16, true);
-    ssd1306_draw_string(handle, 96, 24, (const uint8_t *)light_str, 12, true);
+    ssd1306_draw_string(handle, 106, 24, (const uint8_t *)light_str, 12, true);
     ssd1306_draw_string(handle, 64, 24, (const uint8_t *)"Light: ", 12, true);
 }

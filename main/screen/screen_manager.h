@@ -17,6 +17,7 @@ typedef struct {
 void screen_manager_init();
 void next_screen();
 void previous_screen();
+void set_screen_number(int screen_number);
 const screen_t *get_current_screen();
 void set_screen_animation(int screen_id, const uint8_t (*new_animation)[128]);
 
