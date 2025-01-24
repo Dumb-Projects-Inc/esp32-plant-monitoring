@@ -9,6 +9,7 @@
 #include "animation_play.h"
 #include <freertos/semphr.h>
 #include "screen_manager.h"
+#include "sensor_data.h"
 
 #define I2C_MASTER_NUM I2C_NUM_0
 #define OLED_ADDR 0x3C
