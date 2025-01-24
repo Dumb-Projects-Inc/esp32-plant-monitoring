@@ -6,8 +6,8 @@
 // the header elsewhere will redefine a referense instead of defining it again.
 extern const uint8_t heart_rate_animation[][128];
 extern const uint8_t leaf_animation[][128];
-
 extern const uint8_t temperature_animation[][128];
-extern const uint8_t freezing_animation[][128];
 extern const uint8_t alarm_animation[][128];
 
+
+// Credits to https://animator.wokwi.com/ for the bitmap data.

@@ -19,24 +19,27 @@ void animation_play(ssd1306_handle_t handle)
         }
         screen->update(handle);
 
-        if (sensorData.soil.humidity < limits.soil_humidity)
+        if (sensorData.soil.humidity < limits.soil_humidity && sensorData.soil.humidity > 0)
         {
             set_screen_animation(0, alarm_animation);
-        } else {
+            set_screen_number(0);
+        }
+        else
+        {
             set_screen_animation(0, heart_rate_animation);
         }
 
         if (screen->animation != NULL && screen->animation_frames > 0) // if there is an animation set to play, then play it!
         {
-            for (int y = 16; y < 48; y++)
+            for (int y = 22; y < 48; y++)
             {
                 ssd1306_draw_line(handle, 0, y, 32, y, 0);
             }
 
-            ssd1306_draw_bitmap(handle, 5, 16, screen->animation[frame_index], 32, 32);
+            ssd1306_draw_bitmap(handle, 5, 22, screen->animation[frame_index], 32, 32);
             frame_index = (frame_index + 1) % screen->animation_frames; // increments the index of frames and resets ALL the way back to frame 1 when it reaches the end of index
         }
-        ssd1306_refresh_gram(handle);   // refreshes the screen. This function is the reason why the screen is smooth and not flickering
+        ssd1306_refresh_gram(handle);  // refreshes the screen. This function is the reason why the screen is smooth and not flickering
         vTaskDelay(pdMS_TO_TICKS(16)); // waits
     }
 }
