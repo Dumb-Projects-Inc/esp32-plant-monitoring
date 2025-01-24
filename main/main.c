@@ -30,7 +30,6 @@
 
 // OUTPUT PINS
 #define GPIO_BUZZ_PIN (9)
-#define GPIO_REDLED_PIN (1)
 
 #define GPIO_RGB_R_PIN (4)
 #define GPIO_RGB_G_PIN (5)
